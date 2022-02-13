@@ -1,0 +1,20 @@
+{
+  "name": "idk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Drxckzyz/idk.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Drxckzyz/idk/issues"
+  },
+  "homepage": "https://github.com/Drxckzyz/idk#readme"
+}
