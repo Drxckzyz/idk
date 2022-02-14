@@ -1,3 +1,4 @@
+import { RESTGetAPIGatewayBotResult, Routes } from "discord-api-types/v9";
 import { RestManager, RestProxy } from "../rest/index"
 import { Shard } from "./Shard";
 
@@ -8,7 +9,7 @@ export class GatewayManager {
     lastShardId: number;
     maxClusters: number;
     maxShards: number;
-    rest: RestManager | RestProxy;
+    rest: RestManager //| RestProxy;
     shards = new Map<number, Shard>();
     shardsPerCluster: number;
     private readonly _token: string
@@ -55,7 +56,7 @@ export class GatewayManager {
             url,
             shards: recommanedShards,
             session_start_limit: sessionInfo
-        } = await this.rest.getBotGateway()
+        } = await this.rest.get<RESTGetAPIGatewayBotResult>(Routes.gatewayBot())
 
         this.prepareBuckets(sessionInfo.max_concurrency)
 
@@ -64,7 +65,7 @@ export class GatewayManager {
 
                 for (const shardId of queue) {
                     bucket.createNextShard.push(async () => {
-                        await (new Shard(this, shardId, workerId)).connect()
+                        await (new Shard(this, shardId, workerId)).connect(url)
                     })
                 }
             }
@@ -78,7 +79,7 @@ export interface GatewayManagerOptions {
     lastShardId?: number;
     maxClusters?: number;
     maxShards?: number;
-    rest?: RestProxy;
+    rest?: RestManager;
     shardsPerCluster?: number
     token: string;
 }

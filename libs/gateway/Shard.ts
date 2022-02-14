@@ -1,13 +1,17 @@
 import { GatewayManager } from "."
+import ws from "ws"
 
 export class Shard {
-    constructor(manager: GatewayManager, id: number, clusterId: number) {
-
+    private connection: ws | null;
+    constructor(private manager: GatewayManager, public id: number, public clusterId: number) {
+        this.connection = null
     }
 
-    async connect() {
+    async connect(baseurl: string) {
         return new Promise((resolve, reject) => {
-            setTimeout(() => resolve(null), 1000 * 20)
+            const url = `${baseurl}/?v=9&encoding=json`
+            this.connection = new ws(url)
+            resolve(this.connection)
         })
     }
 }
