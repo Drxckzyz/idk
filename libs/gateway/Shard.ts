@@ -1,14 +1,14 @@
 import { GatewayManager } from "."
 import ws from "ws"
 import { GatewayReceivePayload, GatewayOpcodes, GatewaySendPayload, GatewayDispatchPayload } from "discord-api-types/gateway/v9";
-import { Queue } from "../common/index"
+import { MessageQueue } from "../common/index"
 import { readdirSync } from "fs"
 
 const handlers = readdirSync("build/libs/gateway/handlers").map((name) => name.replace(".js", ""))
 
 export class Shard {
     private connection: ws | null;
-    private messageQueue = new Queue()
+    private messageQueue = new MessageQueue<GatewaySendPayload>({ limit: 120, resetTime: 1000 * 60, sendFunction: (data) => this._send(data) })
     private sessionId?: string;
     constructor(private manager: GatewayManager, public id: number, public clusterId: number) {
         this.connection = null
@@ -63,7 +63,8 @@ export class Shard {
 
     // TODO: REDUE QUEUE SYSTEM
     send(data: GatewaySendPayload, urgent = false) {
-        return this.messageQueue.run(() => this._send(data), urgent)
+        this.messageQueue.push(data, urgent)
+        return this.messageQueue.process()
     }
 
     private async _send(data: GatewaySendPayload) {
@@ -71,6 +72,7 @@ export class Shard {
             //REQUEUE
             return
         }
+
 
         return this.connection.send(JSON.stringify(data), (err) => {
             if (err) Promise.reject(err)
