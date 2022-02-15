@@ -23,7 +23,9 @@
     "typescript": "^4.5.5"
   },
   "dependencies": {
+    "@types/ioredis": "^4.28.8",
     "discord-api-types": "^0.27.0",
+    "ioredis": "^4.28.5",
     "tslib": "^2.3.1",
     "ws": "^8.5.0"
   }

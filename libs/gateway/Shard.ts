@@ -1,6 +1,6 @@
 import { GatewayManager } from "."
 import ws from "ws"
-import { GatewayReceivePayload, GatewayOpcodes, GatewaySendPayload, GatewayDispatchPayload } from "discord-api-types/gateway/v9";
+import { GatewayReceivePayload, GatewayOpcodes, GatewaySendPayload, GatewayDispatchPayload, GatewayDispatchEvents } from "discord-api-types/gateway/v9";
 import { MessageQueue } from "../common/index"
 import { readdirSync } from "fs"
 
@@ -23,13 +23,19 @@ export class Shard {
         })
     }
 
-    private _handleDispatch(data: GatewayDispatchPayload) {
-        console.log(handlers, handlers.includes(data.t))
+    private async _handleDispatch(data: GatewayDispatchPayload) {
+        switch (data.t) {
+            case GatewayDispatchEvents.Ready:
+                this.sessionId = data.d.session_id;
+            default:
+                if (!handlers.includes(data.t)) return console.log(`No handler found for ${data.t}`)
+                const { default: handle } = await import(`./handlers/${data.t}`)
+                return handle(data, this.manager, this)
+        }
     }
 
     private _handleMessage(data: ws.RawData) {
         const payload: GatewayReceivePayload = JSON.parse(data.toString())
-        console.log(payload)
 
         switch (payload.op) {
             case GatewayOpcodes.Dispatch:
