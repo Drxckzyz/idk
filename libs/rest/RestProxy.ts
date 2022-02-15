@@ -1,6 +1,4 @@
 import { CreateRestOptions } from "./Constants";
-import { Routes, RESTGetAPIGatewayBotResult } from "discord-api-types/v9";
-import { Bucket } from ".";
 
 export class RestProxy {
     maxRetryCount: number;

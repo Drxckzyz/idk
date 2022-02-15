@@ -9,7 +9,7 @@ export interface RatelimitData {
     remaining: number;
 }
 
-export class Bucket {
+export class RouteBucket {
     public static readonly BUCKET_TTL = 1e4;
     /*
  * Credit to https://github.com/abalabahaha/eris
@@ -42,12 +42,25 @@ export class Bucket {
         public readonly rest: RestManager,
         public readonly route: string
     ) {
-        this._destroyTimeout = setTimeout(() => this.rest.buckets.delete(this.route), Bucket.BUCKET_TTL).unref();
+        this._destroyTimeout = setTimeout(() => this.rest.buckets.delete(this.route), RouteBucket.BUCKET_TTL).unref();
+    }
+
+    get handler() {
+        return this.rest.handler
     }
 
 
-    public async make<T = any>(options: BucketMakeOptions): Promise<T> {
+    public async make<T = any>(options: RouteBucketMakeOptions): Promise<T> {
         this._destroyTimeout.refresh()
+
+        // TODO: Add a retry after ratelimit shit
+        const rateLimitTimeout = await this.handler.claim(this.route)
+            .catch(() => Promise.reject(new Error(`A ratelimit was hit/prevented while "${this.route}"`)))
+
+        if (rateLimitTimeout > 0) {
+            // TODOD: Notify Ratelimit
+            console.log(`RATELIMIT`)
+        }
 
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), options.abortAfter).unref()
@@ -83,6 +96,17 @@ export class Bucket {
             state.timeout = Number(resetAfter) * 1000;
         }
 
+        await this.handler.set(options.path, state)
+
+        if (res.status === 429) {
+            const retry = res.headers.get('retry-after');
+            /* istanbul ignore next */
+            const retryAfter = Number(retry ?? 1) * 1000;
+
+            await this.handler.set(this.route, { timeout: retryAfter });
+            return Promise.reject(new Error(`A ratelimit was hit/prevented while "${this.route}"`));
+        }
+
         if (res.headers.get('content-type')?.startsWith('application/json')) {
             return res.json() as Promise<T>;
         }
@@ -91,7 +115,7 @@ export class Bucket {
     }
 }
 
-export interface BucketMakeOptions {
+export interface RouteBucketMakeOptions {
     body?: any;
     params?: string;
     headers: Headers;

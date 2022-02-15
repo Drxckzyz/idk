@@ -1,9 +1,11 @@
 import { RestManagerOptions, RequestMethods } from "./Constants";
 import { Headers } from "node-fetch"
-import { Bucket } from ".";
+import { RouteBucket } from ".";
+import { RateLimitHandler } from "./RateLimitHandler";
 
 export class RestManager {
-    buckets = new Map<string, Bucket>();
+    buckets = new Map<string, RouteBucket>();
+    handler = new RateLimitHandler()
     maxRetryCount: number;
     abortAfter: number = 10000;
     private readonly _token: string
@@ -13,11 +15,11 @@ export class RestManager {
     }
 
     async make<T>(method: RequestMethods, path: string, data: RequestOptions = {}): Promise<T> {
-        const route = Bucket.makeRoute(method, path)
+        const route = RouteBucket.makeRoute(method, path)
 
         let bucket = this.buckets.get(route)
         if (!bucket) {
-            bucket = new Bucket(this, route)
+            bucket = new RouteBucket(this, route)
             this.buckets.set(route, bucket)
         }
 
