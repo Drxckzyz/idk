@@ -12,7 +12,7 @@ export class GatewayManager {
     rest: RestManager //| RestProxy;
     shards = new Map<number, Shard>();
     shardsPerCluster: number;
-    private readonly _token: string
+    readonly _token: string
     constructor(options: GatewayManagerOptions) {
         this.buckets = new Map()
         this.firstShardId = options.firstShardId ?? 0
@@ -52,6 +52,7 @@ export class GatewayManager {
     }
 
     async spawn() {
+        // TODOD: CHeck to see if data is already passed to avoid ratelimits
         const {
             url,
             shards: recommanedShards,
