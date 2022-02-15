@@ -1,16 +1,14 @@
-import { GatewayManager } from "."
+import { GatewayManager, GatewayManagerOptions } from "."
 import ws from "ws"
 import { GatewayReceivePayload, GatewayOpcodes, GatewaySendPayload, GatewayDispatchPayload, GatewayDispatchEvents } from "discord-api-types/gateway/v9";
 import { MessageQueue } from "../common/index"
-import { readdirSync } from "fs"
 
-const handlers = readdirSync("build/libs/gateway/handlers").map((name) => name.replace(".js", ""))
 
 export class Shard {
     private connection: ws | null;
     private messageQueue = new MessageQueue<GatewaySendPayload>({ limit: 120, resetTime: 1000 * 60, sendFunction: (data) => this._send(data) })
     private sessionId?: string;
-    constructor(private manager: GatewayManager, public id: number, public clusterId: number) {
+    constructor(private manager: GatewayManager, public id: number, public clusterId: number, private manageOptions: GatewayManagerOptions) {
         this.connection = null
     }
 
@@ -27,10 +25,14 @@ export class Shard {
         switch (data.t) {
             case GatewayDispatchEvents.Ready:
                 this.sessionId = data.d.session_id;
+                const bucket = this.manager.buckets.get(this.id % 1)
+                if (bucket?.createNextShard.length) {
+                    setTimeout(() => {
+                        bucket.createNextShard.shift()?.()
+                    }, this.manageOptions.shardSpawnDelay)
+                }
             default:
-                if (!handlers.includes(data.t)) return console.log(`No handler found for ${data.t}`)
-                const { default: handle } = await import(`./handlers/${data.t}`)
-                return handle(data, this.manager, this)
+                return this.manageOptions.handleDiscordPayload(data, this)
         }
     }
 

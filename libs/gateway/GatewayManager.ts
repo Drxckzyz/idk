@@ -1,26 +1,30 @@
-import { RESTGetAPIGatewayBotResult, Routes } from "discord-api-types/v9";
+import { mergeDefault } from "../common/";
+import { GatewayDispatchPayload, RESTGetAPIGatewayBotResult, Routes } from "discord-api-types/v9";
 import { RestManager, RestProxy } from "../rest/index"
 import { Shard } from "./Shard";
 
 export class GatewayManager {
-    buckets: Map<number, { workers: Array<number>[], createNextShard: Array<() => Promise<any>> }>;
+    buckets = new Map<number, { workers: Array<number>[], createNextShard: Array<() => Promise<any>> }>();
     clusters = new Map<number, any>();
     firstShardId: number;
     lastShardId: number;
     maxClusters: number;
     maxShards: number;
-    rest: RestManager //| RestProxy;
+    readonly options: GatewayManagerOptions;
+    rest: RestManager | RestProxy;
     shards = new Map<number, Shard>();
     shardsPerCluster: number;
+    shardSpawnDelay: number;
     readonly _token: string
     constructor(options: GatewayManagerOptions) {
-        this.buckets = new Map()
+        this.options = mergeDefault(GatewayManagerDefaultOptions, options)
         this.firstShardId = options.firstShardId ?? 0
         this.lastShardId = options.lastShardId ?? (options.maxShards || 1)
         this.maxClusters = options.maxClusters ?? 4
         this.maxShards = options.maxShards ?? 1
         this._token = options.token
         this.shardsPerCluster = options.shardsPerCluster ?? 25
+        this.shardSpawnDelay = options.shardSpawnDelay ?? 5000
         this.rest = options.rest ?? new RestManager({ token: options.token })
     }
 
@@ -66,7 +70,7 @@ export class GatewayManager {
 
                 for (const shardId of queue) {
                     bucket.createNextShard.push(async () => {
-                        await (new Shard(this, shardId, workerId)).connect(url)
+                        await (new Shard(this, shardId, workerId, this.options)).connect(url)
                     })
                 }
             }
@@ -77,10 +81,25 @@ export class GatewayManager {
 
 export interface GatewayManagerOptions {
     firstShardId?: number;
+    gatewayProxyEnabled?: boolean;
+    handleDiscordPayload: (data: GatewayDispatchPayload, shard: Shard) => void;
     lastShardId?: number;
     maxClusters?: number;
     maxShards?: number;
-    rest?: RestManager;
-    shardsPerCluster?: number
+    rest?: RestManager | RestProxy;
+    shardsPerCluster?: number;
+    shardSpawnDelay?: number;
     token: string;
+}
+
+export const GatewayManagerDefaultOptions: Omit<GatewayManagerOptions, "handleDiscordPayload"> = {
+    firstShardId: 0,
+    gatewayProxyEnabled: true,
+    lastShardId: 0,
+    maxClusters: 1,
+    maxShards: 1,
+    rest: undefined,
+    shardsPerCluster: 25,
+    shardSpawnDelay: 5000,
+    token: "",
 }
