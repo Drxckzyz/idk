@@ -4,7 +4,7 @@ import { RestProxy, RestManager } from "../rest/"
 import { GatewayDispatchEvents, GatewayDispatchPayload } from "discord-api-types/v9";
 import { mergeDefault } from "../common/";
 
-const handlers = readdirSync("build/libs/bot/handlers").map((name) => name.replace(".js", ""))
+const handlers = readdirSync(__dirname + "/handlers").map((name) => name.replace(".js", ""))
 
 export class Bot {
     public gateway: GatewayManager | null;
