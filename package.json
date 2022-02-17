@@ -2,7 +2,7 @@
   "name": "idk",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "build/libs/index.js",
   "scripts": {
     "test": "node build/test/test.js",
     "build": "tsc --build"

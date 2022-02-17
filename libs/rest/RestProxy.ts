@@ -33,7 +33,7 @@ export class RestProxy {
     }
 }
 
-export interface RequestOptions {
+interface RequestOptions {
     body?: any;
     headers?: Record<string, string>;
     params?: any;
