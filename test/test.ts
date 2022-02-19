@@ -1,7 +1,6 @@
-import { GatewayManager } from "../libs/gateway/index"
+import { Bot } from "../libs/bot"
 
-// @ts-expect-error
-const gateway = new GatewayManager({
-    token: "k"
+const bot = new Bot({
+    token: ""
 })
-gateway.spawn()
+bot.start()

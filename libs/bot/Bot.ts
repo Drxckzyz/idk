@@ -51,7 +51,7 @@ export class Bot {
     private validateOptions() {
         if (typeof this.options.token != "string") throw new TypeError(`Toke must be string`)
         else if (this.options.token === "NO_TOKEN") throw new Error("Please provide a token")
-        else if (this.options.handleDiscordPayload === undefined) this.handlePayload = (data, shard) => this.handlePayload(data, shard)
+        else if (this.options.handleDiscordPayload === undefined) this.options.handleDiscordPayload = (data, shard) => this.handlePayload(data, shard)
         return
     }
 }
@@ -74,8 +74,8 @@ export const DefaultBotOptions: BotOptions = {
     gatewayProxyEnabled: false,
     handleDiscordPayload: undefined,
     restProxy: undefined,
-    lastShardId: 0,
-    maxClusters: 1,
+    lastShardId: 1,
+    maxClusters: 4,
     maxShards: 1,
     shardSpawnDelay: 5000,
     shardsPerCluster: 25,

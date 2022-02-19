@@ -38,9 +38,10 @@ export class GatewayManager {
         }
 
         for (let i = this.firstShardId; i < this.lastShardId; i++) {
-            if (i >= this.maxShards) {
+            console.log(i)
+            /*if (i >= this.maxShards) {
                 continue;
-            }
+            }*/
 
             const bucketId = i % maxConcurreny
             const bucket = this.buckets.get(bucketId)
@@ -66,6 +67,7 @@ export class GatewayManager {
         this.prepareBuckets(sessionInfo.max_concurrency)
 
         this.buckets.forEach(async (bucket, bucketId) => {
+            console.log(bucket, this.options)
             for (const [workerId, ...queue] of bucket.workers) {
 
                 for (const shardId of queue) {
@@ -95,8 +97,8 @@ export interface GatewayManagerOptions {
 export const GatewayManagerDefaultOptions: Omit<GatewayManagerOptions, "handleDiscordPayload"> = {
     firstShardId: 0,
     gatewayProxyEnabled: true,
-    lastShardId: 0,
-    maxClusters: 1,
+    lastShardId: 1,
+    maxClusters: 4,
     maxShards: 1,
     rest: undefined,
     shardsPerCluster: 25,

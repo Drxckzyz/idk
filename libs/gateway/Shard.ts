@@ -1,15 +1,19 @@
 import { GatewayManager, GatewayManagerOptions } from "."
 import ws from "ws"
-import { GatewayReceivePayload, GatewayOpcodes, GatewaySendPayload, GatewayDispatchPayload, GatewayDispatchEvents } from "discord-api-types/gateway/v9";
+import { GatewayReceivePayload, GatewayOpcodes, GatewaySendPayload, GatewayDispatchPayload, GatewayDispatchEvents, GatewayCloseCodes } from "discord-api-types/gateway/v9";
 import { MessageQueue } from "../common/index"
+import { GatewayError } from "../error";
 
 
 export class Shard {
     private connection: ws | null;
+    private heartBeatInterval: NodeJS.Timer | null;
     private messageQueue = new MessageQueue<GatewaySendPayload>({ limit: 120, resetTime: 1000 * 60, sendFunction: (data) => this._send(data) })
     private sessionId?: string;
+    private sequence = Infinity;
     constructor(private manager: GatewayManager, public id: number, public clusterId: number, private manageOptions: GatewayManagerOptions) {
         this.connection = null
+        this.heartBeatInterval = null
     }
 
     async connect(baseurl: string) {
@@ -17,8 +21,29 @@ export class Shard {
             const url = `${baseurl}/?v=9&encoding=json`
             this.connection = new ws(url)
             this.connection.on("message", this._handleMessage.bind(this))
+            this.connection.on("open", () => this.debug(`Connected, waiting for hello`))
+            this.connection.on("close", this._handleClose.bind(this))
             resolve(this.connection)
         })
+    }
+
+    debug(msg: string) {
+        return console.log(`Shard ${this.id} | ${msg}`)
+    }
+
+    private async _handleClose(code: number) {
+        this.debug(`Connection was closed with code ${code}`)
+
+        switch (code) {
+            case GatewayCloseCodes.AuthenticationFailed:
+                this.debug(`Client had an invalid Token`)
+                throw new GatewayError("tokenInvalid")
+            case GatewayCloseCodes.DisallowedIntents:
+                this.debug(`Client had Disallowed intents`)
+                throw new GatewayError("disallowsIntents")
+            default:
+                return this.debug(`Close code ${code} is Unhandled, doing nothing....`)
+        }
     }
 
     private async _handleDispatch(data: GatewayDispatchPayload) {
@@ -39,16 +64,32 @@ export class Shard {
     private _handleMessage(data: ws.RawData) {
         const payload: GatewayReceivePayload = JSON.parse(data.toString())
 
+        if (payload.s) this.sequence = payload.s
+        console.log("RECIEVED", payload)
+
         switch (payload.op) {
             case GatewayOpcodes.Dispatch:
                 this._handleDispatch(payload)
                 break;
             case GatewayOpcodes.Hello:
+                this.debug("Hello recieved, Identifying")
                 this.idenitfy()
+                this.heartbeat(payload.d.heartbeat_interval)
                 break;
             default:
-                return console.log(`Unhandled Event: ${payload.op} "${payload}"`)
+                return this.debug(`Unhandled Event: ${payload.op} "${JSON.stringify(payload)}"`)
         }
+    }
+
+    heartbeat(ms?: number): any {
+        if (ms && !this.heartBeatInterval) {
+            return this.heartBeatInterval = setInterval(() => this.heartbeat(), ms)
+        }
+
+        return this.send({
+            op: GatewayOpcodes.Heartbeat,
+            d: this.sequence
+        }, true)
     }
 
     idenitfy() {
@@ -57,7 +98,7 @@ export class Shard {
                 op: GatewayOpcodes.Identify,
                 d: {
                     token: this.manager._token,
-                    intents: 513,
+                    intents: 547,
                     properties: {
                         $os: process.platform,
                         $browser: "Idk",
@@ -67,6 +108,15 @@ export class Shard {
                 }
             }, true)
         }
+
+        return this.send({
+            op: GatewayOpcodes.Resume,
+            d: {
+                token: this.manager._token,
+                session_id: this.sessionId,
+                seq: this.sequence,
+            }
+        }, true)
     }
 
     // TODO: REDUE QUEUE SYSTEM
@@ -76,8 +126,10 @@ export class Shard {
     }
 
     private async _send(data: GatewaySendPayload) {
+        console.log("SENDING", data)
         if (this.connection?.readyState != ws.OPEN) {
-            //REQUEUE
+            this.messageQueue.push(data, true)
+            this.messageQueue.process()
             return
         }
 

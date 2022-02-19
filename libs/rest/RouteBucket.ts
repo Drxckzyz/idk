@@ -105,6 +105,8 @@ export class RouteBucket {
 
             await this.handler.set(this.route, { timeout: retryAfter });
             return Promise.reject(new Error(`A ratelimit was hit/prevented while "${this.route}"`));
+        } else if (res.status === 401) {
+            return Promise.reject(new Error(`Token provided is invalid`))
         }
 
         if (res.headers.get('content-type')?.startsWith('application/json')) {
