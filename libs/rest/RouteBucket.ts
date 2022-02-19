@@ -1,3 +1,4 @@
+import { DiscordAPIError } from "../error";
 import fetch, { Headers } from "node-fetch"
 import { RestManager, RestProxy } from ".";
 import { API_VERION, RequestMethods, Urls } from "./Constants";
@@ -98,15 +99,18 @@ export class RouteBucket {
 
         await this.handler.set(options.path, state)
 
-        if (res.status === 429) {
-            const retry = res.headers.get('retry-after');
-            /* istanbul ignore next */
-            const retryAfter = Number(retry ?? 1) * 1000;
+        if (!res.ok) {
+            if (res.status === 429) {
+                const retry = res.headers.get('retry-after');
+                /* istanbul ignore next */
+                const retryAfter = Number(retry ?? 1) * 1000;
 
-            await this.handler.set(this.route, { timeout: retryAfter });
-            return Promise.reject(new Error(`A ratelimit was hit/prevented while "${this.route}"`));
-        } else if (res.status === 401) {
-            return Promise.reject(new Error(`Token provided is invalid`))
+                await this.handler.set(this.route, { timeout: retryAfter });
+                throw new Error(`A ratelimit was hit/prevented while "${this.route}"`)
+            } else if (res.status >= 400 && res.status < 500) {
+                const data = await res.json()
+                throw new DiscordAPIError(data, 'code' in data ? data.code : data.error, res.status, options.method, options.path, options.body)
+            }
         }
 
         if (res.headers.get('content-type')?.startsWith('application/json')) {

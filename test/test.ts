@@ -1,6 +1,6 @@
 import { Bot } from "../libs/bot"
 
 const bot = new Bot({
-    token: ""
+    token: "k"
 })
 bot.start()

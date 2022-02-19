@@ -2,7 +2,7 @@ import { Bot } from "../../";
 import { RESTPostAPIWebhookWithTokenJSONBody, Snowflake, APIMessage, Routes } from "discord-api-types/v9"
 
 export async function executeWebhook(bot: Bot, hookId: string, hookToken: string, options: ExecuteWebhookOptions): Promise<APIMessage | null> {
-    const data: RESTPostAPIWebhookWithTokenJSONBody = {
+    const body: RESTPostAPIWebhookWithTokenJSONBody = {
         allowed_mentions: options.allowed_mentions,
         attachments: options.attachments,
         avatar_url: options.avatar_url,
@@ -15,7 +15,7 @@ export async function executeWebhook(bot: Bot, hookId: string, hookToken: string
     }
 
     const res = await bot.rest.post<APIMessage>(Routes.webhook(hookId, hookToken), {
-        body: data,
+        body,
         params: {
             wait: options.wait ?? false,
             thread_id: options.thread_id ?? "",
