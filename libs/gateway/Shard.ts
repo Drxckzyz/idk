@@ -57,7 +57,7 @@ export class Shard {
                     }, this.manageOptions.shardSpawnDelay)
                 }
             default:
-                return this.manageOptions.handleDiscordPayload(data, this)
+                return this.manageOptions.handleDiscordPayload(data, this.id)
         }
     }
 

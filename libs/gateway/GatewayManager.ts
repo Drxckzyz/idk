@@ -84,7 +84,7 @@ export class GatewayManager {
 export interface GatewayManagerOptions {
     firstShardId?: number;
     gatewayProxyEnabled?: boolean;
-    handleDiscordPayload: (data: GatewayDispatchPayload, shard: Shard) => void;
+    handleDiscordPayload: (data: GatewayDispatchPayload, shardId: number) => void;
     lastShardId?: number;
     maxClusters?: number;
     maxShards?: number;

@@ -1,18 +1,21 @@
-import { GatewayManager, GatewayManagerOptions, Shard } from "../gateway/"
+import { GatewayManager, GatewayManagerOptions } from "../gateway/"
 import { readdirSync } from "fs"
 import { RestProxy, RestManager } from "../rest/"
-import { GatewayDispatchEvents, GatewayDispatchPayload } from "discord-api-types/v9";
+import { GatewayDispatchPayload } from "discord-api-types/v9";
 import { mergeDefault } from "../common/";
 
 const handlers = readdirSync(__dirname + "/handlers").map((name) => name.replace(".js", ""))
 
 export class Bot {
+    public readonly events: EventHandlers;
     public gateway: GatewayManager | null;
     public rest: RestManager | RestProxy;
-    private readonly options: BotOptions;
+    readonly options: BotOptions;
     constructor(options: BotOptions) {
         this.options = mergeDefault<BotOptions>(DefaultBotOptions, options)
         this.validateOptions()
+        // @ts-ignore
+        this.events = this.options?.events ?? DefaultBotOptions.events
         const opt = this.makeOptions()
         this.rest = options.restProxy ? options.restProxy : new RestManager(opt.rest)
         this.gateway = !options.gatewayProxyEnabled ? new GatewayManager({ ...opt.gateway, rest: this.rest }) : null
@@ -23,10 +26,10 @@ export class Bot {
         return this.gateway?.spawn()
     }
 
-    private async handlePayload(data: GatewayDispatchPayload, shard: Shard) {
+    private async handlePayload(data: GatewayDispatchPayload, shardId: number) {
         if (!handlers.includes(data.t)) return console.log(`No handler found for ${data.t}`)
         const { default: handle } = await import(`./handlers/${data.t}`)
-        return handle(data, this.gateway, shard)
+        return handle(data, this.gateway, shardId)
     }
 
 
@@ -37,7 +40,7 @@ export class Bot {
         const gateway: GatewayManagerOptions = {
             firstShardId: this.options.firstShardId,
             lastShardId: this.options.lastShardId,
-            handleDiscordPayload: this.options.handleDiscordPayload ?? ((data: GatewayDispatchPayload, shard: Shard) => this.handlePayload(data, shard)),
+            handleDiscordPayload: this.options.handleDiscordPayload ?? ((data: GatewayDispatchPayload, shardId: number) => this.handlePayload(data, shardId)),
             token: this.options.token,
             maxClusters: this.options.maxClusters,
             maxShards: this.options.maxShards,
@@ -51,15 +54,16 @@ export class Bot {
     private validateOptions() {
         if (typeof this.options.token != "string") throw new TypeError(`Toke must be string`)
         else if (this.options.token === "NO_TOKEN") throw new Error("Please provide a token")
-        else if (this.options.handleDiscordPayload === undefined) this.options.handleDiscordPayload = (data, shard) => this.handlePayload(data, shard)
+        else if (this.options.handleDiscordPayload === undefined) this.options.handleDiscordPayload = (data, shardId) => this.handlePayload(data, shardId)
         return
     }
 }
 
 export interface BotOptions {
+    events?: Partial<EventHandlers>;
     firstShardId?: number;
     gatewayProxyEnabled?: boolean
-    handleDiscordPayload?: (data: GatewayDispatchPayload, shard: Shard) => void;
+    handleDiscordPayload?: (data: GatewayDispatchPayload, shardId: number) => void;
     restProxy?: RestProxy
     lastShardId?: number;
     maxClusters?: number;
@@ -69,7 +73,12 @@ export interface BotOptions {
     token: string;
 }
 
+const ignore = () => { }
 export const DefaultBotOptions: BotOptions = {
+    events: {
+        debug: ignore,
+        ready: ignore,
+    },
     firstShardId: 0,
     gatewayProxyEnabled: false,
     handleDiscordPayload: undefined,
@@ -80,4 +89,9 @@ export const DefaultBotOptions: BotOptions = {
     shardSpawnDelay: 5000,
     shardsPerCluster: 25,
     token: "NO_TOKEN",
+}
+
+export interface EventHandlers {
+    debug: (msg: string) => void;
+    ready: () => void;
 }
