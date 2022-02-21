@@ -37,21 +37,35 @@ export class GatewayManager {
             })
         }
 
-        for (let i = this.firstShardId; i < this.lastShardId; i++) {
-            console.log(i)
-            /*if (i >= this.maxShards) {
-                continue;
-            }*/
+        /* for (let i = this.firstShardId; i < this.lastShardId; i++) {
+             console.log(i)
+             if (i >= this.maxShards) {
+                 continue;
+             }
+ 
+             const bucketId = i % maxConcurreny
+             const bucket = this.buckets.get(bucketId)
+             if (!bucket) throw new Error("Bucket not found when spawning Shards")
+ 
+             const queue = bucket.workers.find((w) => w.length < this.shardsPerCluster + 1)
+             if (queue) queue.push(i)
+             else {
+                 if (worker + 1 <= this.maxClusters) worker++
+                 bucket.workers.push([worker, i])
+             }
+         } */
 
-            const bucketId = i % maxConcurreny
+        const list = this.options.shardList as Array<number>;
+        for (const shardId of list) {
+            const bucketId = shardId % maxConcurreny
             const bucket = this.buckets.get(bucketId)
             if (!bucket) throw new Error("Bucket not found when spawning Shards")
 
             const queue = bucket.workers.find((w) => w.length < this.shardsPerCluster + 1)
-            if (queue) queue.push(i)
+            if (queue) queue.push(shardId)
             else {
                 if (worker + 1 <= this.maxClusters) worker++
-                bucket.workers.push([worker, i])
+                bucket.workers.push([worker, shardId])
             }
         }
     }
@@ -64,15 +78,21 @@ export class GatewayManager {
             session_start_limit: sessionInfo
         } = await this.rest.get<RESTGetAPIGatewayBotResult>(Routes.gatewayBot())
 
+        if (this.options.shardCount === "auto") {
+            this.options.shardCount = recommanedShards
+        }
+        if (this.options.shardList === "auto") {
+            this.options.shardList = Array.from({ length: recommanedShards }, (_, id) => id)
+        }
+
         this.prepareBuckets(sessionInfo.max_concurrency)
 
         this.buckets.forEach(async (bucket, bucketId) => {
-            console.log(bucket, this.options)
             for (const [workerId, ...queue] of bucket.workers) {
 
                 for (const shardId of queue) {
                     bucket.createNextShard.push(async () => {
-                        await (new Shard(this, shardId, workerId, this.options)).connect(url)
+                        await (new Shard(this, shardId, workerId)).connect(url)
                     })
                 }
             }
@@ -82,26 +102,32 @@ export class GatewayManager {
 }
 
 export interface GatewayManagerOptions {
+    debug?: (msg: string, src: string) => void;
     firstShardId?: number;
     gatewayProxyEnabled?: boolean;
-    handleDiscordPayload: (data: GatewayDispatchPayload, shardId: number) => void;
+    handleDiscordPayload: (data: GatewayDispatchPayload, shardId: number, extra?: { loaded?: boolean }) => void;
     lastShardId?: number;
     maxClusters?: number;
     maxShards?: number;
     rest?: RestManager | RestProxy;
+    shardCount?: number | "auto";
     shardsPerCluster?: number;
     shardSpawnDelay?: number;
+    shardList?: Array<number> | "auto";
     token: string;
 }
 
 export const GatewayManagerDefaultOptions: Omit<GatewayManagerOptions, "handleDiscordPayload"> = {
+    debug: undefined,
     firstShardId: 0,
     gatewayProxyEnabled: true,
     lastShardId: 1,
     maxClusters: 4,
     maxShards: 1,
     rest: undefined,
+    shardCount: "auto",
     shardsPerCluster: 25,
     shardSpawnDelay: 5000,
+    shardList: "auto",
     token: "",
 }

@@ -1,16 +1,19 @@
 import { GatewayManager, GatewayManagerOptions } from "../gateway/"
 import { readdirSync } from "fs"
 import { RestProxy, RestManager } from "../rest/"
-import { GatewayDispatchPayload } from "discord-api-types/v9";
+import { APIGuild, APIGuildMember, APIUser, GatewayDispatchPayload } from "discord-api-types/v9";
 import { mergeDefault } from "../common/";
+import { TestCacheManager } from "../cache";
 
 const handlers = readdirSync(__dirname + "/handlers").map((name) => name.replace(".js", ""))
 
 export class Bot {
+    public cache = new TestCacheManager()
     public readonly events: EventHandlers;
     public gateway: GatewayManager | null;
     public rest: RestManager | RestProxy;
     readonly options: BotOptions;
+    public user: APIUser | null;
     constructor(options: BotOptions) {
         this.options = mergeDefault<BotOptions>(DefaultBotOptions, options)
         this.validateOptions()
@@ -19,6 +22,11 @@ export class Bot {
         const opt = this.makeOptions()
         this.rest = options.restProxy ? options.restProxy : new RestManager(opt.rest)
         this.gateway = !options.gatewayProxyEnabled ? new GatewayManager({ ...opt.gateway, rest: this.rest }) : null
+        this.user = null
+    }
+
+    debug(msg: string, src: string) {
+        return this.events?.debug(`${src} | ${msg}`)
     }
 
     start() {
@@ -26,10 +34,10 @@ export class Bot {
         return this.gateway?.spawn()
     }
 
-    private async handlePayload(data: GatewayDispatchPayload, shardId: number) {
-        if (!handlers.includes(data.t)) return console.log(`No handler found for ${data.t}`)
+    private async handlePayload(data: GatewayDispatchPayload, shardId: number, extra: { loaded?: boolean } = {}) {
+        if (!handlers.includes(data.t)) return this.debug(`No handler found for ${data.t}`, 'Client#handlePayload')
         const { default: handle } = await import(`./handlers/${data.t}`)
-        return handle(data, this.gateway, shardId)
+        return handle(this, data, shardId, extra)
     }
 
 
@@ -38,14 +46,18 @@ export class Bot {
             token: this.options.token
         }
         const gateway: GatewayManagerOptions = {
+            // @ts-expect-error
+            debug: this.options.debug ? (msg: string, src: string) => this.options?.debug(`${src} | ${msg}`) : (msg: string, src: string) => this.debug(msg, src),
             firstShardId: this.options.firstShardId,
             lastShardId: this.options.lastShardId,
-            handleDiscordPayload: this.options.handleDiscordPayload ?? ((data: GatewayDispatchPayload, shardId: number) => this.handlePayload(data, shardId)),
+            handleDiscordPayload: this.options.handleDiscordPayload ?? ((data: GatewayDispatchPayload, shardId: number, extra: { loaded?: boolean } = {}) => this.handlePayload(data, shardId, extra)),
             token: this.options.token,
             maxClusters: this.options.maxClusters,
             maxShards: this.options.maxShards,
             shardSpawnDelay: this.options.shardSpawnDelay,
             shardsPerCluster: this.options.shardsPerCluster,
+            shardCount: this.options.shardCount ?? "auto",
+            shardList: this.options.shardList ?? "auto",
             gatewayProxyEnabled: this.options.gatewayProxyEnabled,
         }
         return { rest, gateway }
@@ -60,15 +72,18 @@ export class Bot {
 }
 
 export interface BotOptions {
+    debug?: (msg: string) => void;
     events?: Partial<EventHandlers>;
     firstShardId?: number;
     gatewayProxyEnabled?: boolean
-    handleDiscordPayload?: (data: GatewayDispatchPayload, shardId: number) => void;
+    handleDiscordPayload?: (data: GatewayDispatchPayload, shardId: number, extra?: { loaded?: boolean }) => void;
     restProxy?: RestProxy
     lastShardId?: number;
     maxClusters?: number;
     maxShards?: number;
+    shardCount?: number | "auto";
     shardsPerCluster?: number;
+    shardList?: Array<number> | "auto";
     shardSpawnDelay?: number;
     token: string;
 }
@@ -78,6 +93,8 @@ export const DefaultBotOptions: BotOptions = {
     events: {
         debug: ignore,
         ready: ignore,
+        guildCreate: ignore,
+        guildMemberUpdate: ignore,
     },
     firstShardId: 0,
     gatewayProxyEnabled: false,
@@ -86,12 +103,16 @@ export const DefaultBotOptions: BotOptions = {
     lastShardId: 1,
     maxClusters: 4,
     maxShards: 1,
+    shardCount: "auto",
     shardSpawnDelay: 5000,
+    shardList: "auto",
     shardsPerCluster: 25,
     token: "NO_TOKEN",
 }
 
 export interface EventHandlers {
     debug: (msg: string) => void;
+    guildCreate: (guild: APIGuild) => void;
+    guildMemberUpdate: (newMember: APIGuildMember, oldMember?: APIGuildMember | undefined) => void;
     ready: () => void;
 }

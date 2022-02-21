@@ -2,11 +2,15 @@ import { Bot } from "../../";
 import { GatewayReadyDispatch } from "discord-api-types/v9";
 
 export default function (bot: Bot, data: GatewayReadyDispatch, shardId: number) {
-    if (bot.options.maxShards === 1) {
-        return bot.events?.ready()
-    }
+    // sanity checks
+    const list = bot.options.shardList as Array<number>;
 
+    // This is prob the first shard so its gonna apply the user
+    if (!bot.user) bot.user = data.d.user
 
-    // TDOD: Shards will change into an array rather than first ad last shard Id
-    return bot.events?.ready()
+    // if all shards are ready then we mark the bot as ready
+    if (list.length === 1 || shardId === list[list.length - 1]) return bot.events?.ready()
+
+    // if not we just dont emit
+    return
 }  

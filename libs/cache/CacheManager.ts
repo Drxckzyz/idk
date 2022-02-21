@@ -21,6 +21,10 @@ export class CacheSystem<T = void> {
         else return JSON.parse(cached)
     }
 
+    async has(id: string) {
+        return await this.reids.exists(this.makeKey(id))
+    }
+
     async set(id: string, data: any): Promise<"OK" | null> {
         return this.reids.set(this.makeKey(id), JSON.stringify(data))
     }
