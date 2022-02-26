@@ -1,5 +1,5 @@
 import { mergeDefault } from "../common/";
-import { GatewayDispatchPayload, RESTGetAPIGatewayBotResult, Routes } from "discord-api-types/v9";
+import { GatewayDispatchPayload, RESTGetAPIGatewayBotResult, Routes, GatewayPresenceUpdateData } from "discord-api-types/v9";
 import { RestManager, RestProxy } from "../rest/index"
 import { Shard } from "./Shard";
 
@@ -109,6 +109,7 @@ export interface GatewayManagerOptions {
     lastShardId?: number;
     maxClusters?: number;
     maxShards?: number;
+    presence?: GatewayPresenceUpdateData;
     rest?: RestManager | RestProxy;
     shardCount?: number | "auto";
     shardsPerCluster?: number;

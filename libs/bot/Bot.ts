@@ -1,7 +1,7 @@
 import { GatewayManager, GatewayManagerOptions } from "../gateway/"
 import { readdirSync } from "fs"
 import { RestProxy, RestManager } from "../rest/"
-import { APIGuild, APIGuildMember, APIUser, GatewayDispatchPayload } from "discord-api-types/v9";
+import { APIGuild, APIGuildMember, APIUser, GatewayDispatchPayload, GatewayPresenceUpdateData } from "discord-api-types/v9";
 import { mergeDefault } from "../common/";
 import { TestCacheManager } from "../cache";
 
@@ -54,6 +54,7 @@ export class Bot {
             token: this.options.token,
             maxClusters: this.options.maxClusters,
             maxShards: this.options.maxShards,
+            presence: this.options.presence,
             shardSpawnDelay: this.options.shardSpawnDelay,
             shardsPerCluster: this.options.shardsPerCluster,
             shardCount: this.options.shardCount ?? "auto",
@@ -81,6 +82,7 @@ export interface BotOptions {
     lastShardId?: number;
     maxClusters?: number;
     maxShards?: number;
+    presence?: GatewayPresenceUpdateData;
     shardCount?: number | "auto";
     shardsPerCluster?: number;
     shardList?: Array<number> | "auto";
@@ -95,6 +97,7 @@ export const DefaultBotOptions: BotOptions = {
         ready: ignore,
         guildCreate: ignore,
         guildMemberUpdate: ignore,
+        shardReady: ignore,
     },
     firstShardId: 0,
     gatewayProxyEnabled: false,
@@ -115,4 +118,5 @@ export interface EventHandlers {
     guildCreate: (guild: APIGuild) => void;
     guildMemberUpdate: (newMember: APIGuildMember, oldMember?: APIGuildMember | undefined) => void;
     ready: () => void;
+    shardReady: (id: number) => void;
 }

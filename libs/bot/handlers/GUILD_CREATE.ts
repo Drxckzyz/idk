@@ -1,7 +1,7 @@
 import { Bot } from "../../";
 import { GatewayGuildCreateDispatch } from "discord-api-types/v9";
 
-export default function (bot: Bot, data: GatewayGuildCreateDispatch, shardId: number, extra: { loaded?: boolean } = {}) {
+export default function (bot: Bot, data: GatewayGuildCreateDispatch, _shardId: number, extra: { loaded?: boolean } = {}) {
     const cache = bot.cache.guilds
     const guild = data.d
 

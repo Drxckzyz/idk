@@ -28,7 +28,7 @@ export class Shard {
             this.connection = new ws(url)
             this.connection.on("message", this._handleMessage.bind(this))
             this.connection.on("open", () => this.debug(`Connected, waiting for hello`))
-            this.connection.on("close", this._handleClose)
+            this.connection.on("close", this._handleClose.bind(this))
             resolve(this.connection)
         })
     }
@@ -74,18 +74,19 @@ export class Shard {
         return
     }
 
+    // BUG???????
     private async _handleClose(code: number) {
-        this.debug(`Connection was closed with code ${code}`)
-
+        this?.debug(`Connection was closed with code ${code}`)
+        console.log(`Connection was closed with code ${code}`)
         switch (code) {
             case GatewayCloseCodes.AuthenticationFailed:
-                this.debug(`Client had an invalid Token`)
+                this?.debug(`Client had an invalid Token`)
                 throw new GatewayError("tokenInvalid")
             case GatewayCloseCodes.DisallowedIntents:
-                this.debug(`Client had Disallowed intents`)
+                this?.debug(`Client had Disallowed intents`)
                 throw new GatewayError("disallowsIntents")
             default:
-                this.debug(`Close code ${code} is Unhandled, reconnecting`)
+                this?.debug(`Close code ${code} is Unhandled, reconnecting`)
                 return this.disconnect()
         }
     }
@@ -166,6 +167,7 @@ export class Shard {
 
     idenitfy() {
         if (!this.sessionId) {
+            const totalshards = this.manager.options.shardList ? Array.isArray(this.manager.options.shardList) ? this.manager.options.shardList?.length : 1 : 1
             return this.send({
                 op: GatewayOpcodes.Identify,
                 d: {
@@ -176,18 +178,8 @@ export class Shard {
                         $browser: "Idk",
                         $device: "Idk"
                     },
-                    shard: [this.id, this.manager.options.shardList?.length ?? 1],
-                    presence: {
-                        activities: [
-                            {
-                                name: `Drx Break me | Shard ${this.id}`,
-                                type: ActivityType.Watching
-                            }
-                        ],
-                        status: PresenceUpdateStatus.DoNotDisturb,
-                        since: Date.now(),
-                        afk: false,
-                    }
+                    shard: [this.id, totalshards],
+                    presence: this.manager.options.presence,
                 }
             }, true)
         }
@@ -201,7 +193,7 @@ export class Shard {
             }
         }, true)
     }
-    // TODO: REDUE QUEUE SYSTEM
+
     send(data: GatewaySendPayload, urgent = false) {
         this.messageQueue.push(data, urgent)
         return this.messageQueue.process()
@@ -217,6 +209,7 @@ export class Shard {
             return
         }
 
+        this.debug(`Sending OPcode: ${data.op} to the Gateway`)
 
         return this.connection.send(JSON.stringify(data), (err) => {
             if (err) Promise.reject(err)
