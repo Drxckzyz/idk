@@ -1,7 +1,7 @@
 import { GatewayManager, GatewayManagerOptions } from "../gateway/"
 import { readdirSync } from "fs"
 import { RestProxy, RestManager } from "../rest/"
-import { APIGuild, APIGuildMember, APIUser, GatewayDispatchPayload, GatewayPresenceUpdateData } from "discord-api-types/v9";
+import { APIGuild, APIGuildMember, GatewayInteractionCreateDispatchData, APIUser, GatewayDispatchPayload, GatewayPresenceUpdateData } from "discord-api-types/v9";
 import { mergeDefault } from "../common/";
 import { TestCacheManager } from "../cache";
 
@@ -98,6 +98,7 @@ export const DefaultBotOptions: BotOptions = {
         guildCreate: ignore,
         guildMemberUpdate: ignore,
         shardReady: ignore,
+        interactionCreate: ignore,
     },
     firstShardId: 0,
     gatewayProxyEnabled: false,
@@ -117,6 +118,7 @@ export interface EventHandlers {
     debug: (msg: string) => void;
     guildCreate: (guild: APIGuild) => void;
     guildMemberUpdate: (newMember: APIGuildMember, oldMember?: APIGuildMember | undefined) => void;
+    interactionCreate: (interaction: GatewayInteractionCreateDispatchData) => void;
     ready: () => void;
     shardReady: (id: number) => void;
 }
