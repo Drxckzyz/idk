@@ -7,6 +7,6 @@ export async function sendInteractionResponse(
     token: string,
     options: APIInteractionResponse,
 ) {
-    const res = await bot.rest.post(Routes.webhook(id, token), { body: options })
+    const res = await bot.rest.post(Routes.interactionCallback(id, token), { body: options })
     return res
 }
