@@ -34,7 +34,7 @@ export class Bot {
         return this.gateway?.spawn()
     }
 
-    private async handlePayload(data: GatewayDispatchPayload, shardId: number, extra: { loaded?: boolean } = {}) {
+    async handlePayload(data: GatewayDispatchPayload, shardId: number, extra: { loaded?: boolean } = {}) {
         if (!handlers.includes(data.t)) return this.debug(`No handler found for ${data.t}`, 'Client#handlePayload')
         const { default: handle } = await import(`./handlers/${data.t}`)
         return handle(this, data, shardId, extra)
@@ -67,7 +67,7 @@ export class Bot {
     private validateOptions() {
         if (typeof this.options.token != "string") throw new TypeError(`Toke must be string`)
         else if (this.options.token === "NO_TOKEN") throw new Error("Please provide a token")
-        else if (this.options.handleDiscordPayload === undefined) this.options.handleDiscordPayload = (data, shardId) => this.handlePayload(data, shardId)
+        else if (this.options.handleDiscordPayload === undefined) this.options.handleDiscordPayload = (data, shardId, extra) => this.handlePayload(data, shardId, extra)
         return
     }
 }
