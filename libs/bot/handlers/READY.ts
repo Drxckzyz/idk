@@ -4,7 +4,6 @@ import { GatewayReadyDispatch } from "discord-api-types/v9";
 export default function (bot: Bot, data: GatewayReadyDispatch, shardId: number) {
     // sanity checks
     const list = bot.options.shardList as Array<number>;
-    console.log(bot.events)
     // This is prob the first shard so its gonna apply the user
     if (!bot.user) bot.user = data.d.user
 
