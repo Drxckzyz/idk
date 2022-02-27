@@ -66,6 +66,7 @@ export class RouteBucket {
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), options.abortAfter).unref()
         const url = `${Urls.BASE_URL}/v${API_VERION}${options.path}${options.params}`
+        options.headers.set("Content-Type", "application/json")
 
         const res = await fetch(url, {
             method: options.method,
