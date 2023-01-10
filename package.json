@@ -19,14 +19,16 @@
   },
   "homepage": "https://github.com/Drxckzyz/idk#readme",
   "devDependencies": {
-    "@types/ws": "^8.2.2",
     "typescript": "^4.5.5"
   },
   "dependencies": {
-    "@types/ioredis": "^4.28.8",
-    "discord-api-types": "^0.27.0",
-    "ioredis": "^4.28.5",
-    "tslib": "^2.3.1",
-    "ws": "^8.5.0"
+    "@types/node": "^18.11.18",
+    "@types/node-fetch": "2",
+    "@types/ws": "^8.5.4",
+    "discord-api-types": "^0.37.26",
+    "fs": "^0.0.1-security",
+    "net-ipc": "^2.0.1",
+    "node-fetch": "2",
+    "ws": "^8.11.0"
   }
 }

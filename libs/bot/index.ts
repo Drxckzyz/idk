@@ -1,1 +1,2 @@
-export * from "./Bot"
+export * from "./bot"
+//export * from "./Handlers"

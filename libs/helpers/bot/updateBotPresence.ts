@@ -3,7 +3,7 @@ import { GatewayManager, Bot } from "../../";
 
 // This fuctions works on the gateway and bot
 export async function updateBotPresence(botOrGateway: Bot | GatewayManager, presnse: GatewayPresenceUpdateData, shardId?: number) {
-    if (botOrGateway instanceof Bot && botOrGateway.options.gatewayProxyEnabled) throw new Error("Cannot set presence with bot when using gateway proxy")
+    if (botOrGateway instanceof Bot && botOrGateway._options.gatewayManager.proxyEnabled) throw new Error("Cannot set presence with bot when using gateway proxy")
     const shards = botOrGateway instanceof Bot ? botOrGateway.gateway?.shards : botOrGateway.shards
     if (!shards || !shards.size) return
     if (shardId) {

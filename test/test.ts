@@ -3,24 +3,40 @@ import { Bot, updateBotPresence } from "../libs"
 
 const a = Array.from({ length: 10 }, (_, i) => i)
 
-const bot = new Bot({
-    token: "c",
-    events: {
-        ready: () => {
-            console.log(`${bot.user?.username} is ready on all Shards`)
+const bot: Bot = new Bot({
+    token: "NzgxMzA0NTY3MDUyMjM4ODU4.GfP2FJ.XB91xI9S0uYoP2HmX_iKAozOmm8a6ahtmPjzR4",
+    debug: true,
+    eventOptions: {
+        events: {
+            ready() {
+                console.log("bot is ready")
+            },
+            shardReady(id) {
+                return updateBotPresence(bot, {
+                    activities: [
+                        {
+                            name: `Shard ${id}`,
+                            type: ActivityType.Playing
+                        }
+                    ],
+                    status: PresenceUpdateStatus.Online,
+                    since: Date.now(),
+                    afk: true,
+                }, id)
+            },
         },
-        debug: (str) => console.log(str),
-        shardReady: (id) => {
-            console.log(`Shard ${id} is ready`)
-            updateBotPresence(bot, {
-                status: PresenceUpdateStatus.DoNotDisturb,
-                activities: [{ name: `Drx break  me | Shard ${id}`, type: ActivityType.Watching }],
-                since: Date.now(),
-                afk: false,
-            }, id)
-        }
+        separateGateway: false,
     },
-    shardList: a,
-    shardCount: a.length,
+    gatewayManager: {
+        proxyEnabled: false,
+        options: {}
+    },
+    loggerOptions: {
+        enabled: true,
+        level: "debug"
+    },
+    restManager: {
+        token: "NzgxMzA0NTY3MDUyMjM4ODU4.GfP2FJ.XB91xI9S0uYoP2HmX_iKAozOmm8a6ahtmPjzR4",
+    }
 })
 bot.start()

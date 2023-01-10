@@ -1,20 +1,17 @@
-import { DiscordAPIError } from "../error";
 import fetch, { Headers } from "node-fetch"
-import { RestManager, RestProxy } from ".";
-import { API_VERION, RequestMethods, Urls } from "./Constants";
+import { RestManager } from "./RestManager"
+import { API_VERION, RequestMethods, Urls } from "./Constants"
 
 export interface RatelimitData {
-    global: boolean;
-    limit: number;
-    timeout: number;
-    remaining: number;
+    global: boolean,
+    limit: number,
+    timeout: number,
+    remaining: number
 }
 
 export class RouteBucket {
     public static readonly BUCKET_TTL = 1e4;
-    /*
- * Credit to https://github.com/abalabahaha/eris
- */
+
     public static makeRoute(method: string, url: string) {
         let route = url
             .replace(/\/([a-z-]+)\/(?:[0-9]{17,19})/g, (match, p) => (['channels', 'guilds', 'webhook'].includes(p) ? match : `/${p}/:id`))
@@ -41,38 +38,36 @@ export class RouteBucket {
 
     public constructor(
         public readonly rest: RestManager,
-        public readonly route: string
+        public readonly route: string,
     ) {
-        this._destroyTimeout = setTimeout(() => this.rest.buckets.delete(this.route), RouteBucket.BUCKET_TTL).unref();
+        this._destroyTimeout = setTimeout(() => this.rest.buckets.delete(this.route), RouteBucket.BUCKET_TTL).unref()
     }
 
-    get handler() {
+    get handler(){
         return this.rest.handler
     }
-
 
     public async make<T = any>(options: RouteBucketMakeOptions): Promise<T> {
         this._destroyTimeout.refresh()
 
-        // TODO: Add a retry after ratelimit shit
         const rateLimitTimeout = await this.handler.claim(this.route)
-            .catch(() => Promise.reject(new Error(`A ratelimit was hit/prevented while "${this.route}"`)))
+            .catch(() => Promise.reject(new Error(`A ratelimit was hit/prevented on "${this.route}"`)))
 
-        if (rateLimitTimeout > 0) {
-            // TODOD: Notify Ratelimit
-            console.log(`RATELIMIT`)
-        }
+        if(rateLimitTimeout > 0){
+            // TODO: Notify RATELIMIT and handle
+            console.log("RATELIMIT HIT" + this.route)
+        }    
 
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), options.abortAfter).unref()
         const url = `${Urls.BASE_URL}/v${API_VERION}${options.path}${options.params}`
         options.headers.set("Content-Type", "application/json")
-
+console.log(options)
         const res = await fetch(url, {
             method: options.method,
             headers: options.headers,
             body: options.body ? JSON.stringify(options.body) : undefined,
-            signal: controller.signal,
+            signal: controller.signal
         }).finally(() => clearTimeout(timeout))
 
         const global = res.headers.get('x-ratelimit-global');
@@ -99,6 +94,7 @@ export class RouteBucket {
         }
 
         await this.handler.set(options.path, state)
+        console.log("REST", state)
 
         if (!res.ok) {
             if (res.status === 429) {
@@ -110,7 +106,8 @@ export class RouteBucket {
                 throw new Error(`A ratelimit was hit/prevented while "${this.route}"`)
             } else if (res.status >= 400 && res.status < 500) {
                 const data = await res.json()
-                throw new DiscordAPIError(data, 'code' in data ? data.code : data.error, res.status, options.method, options.path, options.body)
+                console.log(data)
+                throw new Error(data)
             }
         }
 
